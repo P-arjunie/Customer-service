@@ -113,3 +113,48 @@ exports.getCustomerProfile = async (req, res) => {
         });
     }
 };
+
+// Update customer profile
+exports.updateCustomerProfile = async (req, res) => {
+    try {
+      const token = req.header('Authorization');
+      if (!token) {
+        return res.status(401).json({ message: 'Access denied. No token provided.' });
+      }
+  
+      // Verify token with auth service
+      const verifyResponse = await axios.get(
+        `${process.env.AUTH_SERVICE_URL}/api/auth/verify-token`,
+        { headers: { Authorization: token } }
+      );
+  
+      const email = verifyResponse.data.email;
+  
+      // Find the customer by email
+      const customer = await Customer.findOne({ email });
+      if (!customer) {
+        return res.status(404).json({ message: 'Customer not found' });
+      }
+  
+      // Update fields (only if they are provided in req.body)
+      const { name, phone, address } = req.body;
+      if (name) customer.name = name;
+      if (phone) customer.phone = phone;
+      if (address) customer.address = address;
+  
+      await customer.save();
+  
+      res.status(200).json({
+        message: 'Customer profile updated successfully',
+        customer,
+      });
+  
+    } catch (err) {
+      console.error('Error updating customer profile:', err.message);
+      res.status(500).json({
+        message: 'Failed to update profile',
+        error: err.message,
+      });
+    }
+  };
+  
